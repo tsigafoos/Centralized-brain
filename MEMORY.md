@@ -77,15 +77,22 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
    - Temperature sampling, context management, token streaming
 2. **Cargo.toml**: Updated with llama-cpp-2, encoding_rs, tokio-tungstenite, rusqlite
 
+### ✅ Newly Complete (Desktop Phase)
+1. **Desktop GUI**: Complete Tauri + React + TypeScript scaffolding
+   - BrainstormChat component: message history, typing indicators, animations
+   - TaskPanel component: priority-based sorting, status tracking, collapsible
+   - SettingsPanel component: context size configuration, persistent settings
+   - API integration: wired to /v1/chat/completions on port 9000
+   - Context windowing: dynamic summarization when exceeding MAX_CONTEXT_SIZE
+   - Token estimation: ~0.25 tokens per character for real-time management
+
 ### ⚠️ Stubs/TODO
 1. **ResponseParser**: Needs to use InferenceProvider to extract tasks from brainstorm
-2. **Config/Main**: Wire InferenceProvider into AppState (in progress)
-3. **Model Management**: /v1/models endpoints (list, load, unload, download GGUF)
-4. **Voice Providers**: All voice implementations are stubs (TODO comments)
-5. **Firebase Sync**: Mock only, real implementation needed
-6. **Desktop GUI**: React/Vue web app for brainstorming and task management
-7. **Hooks**: Directory created, needs shell/Python scripts
-8. **Tests**: No unit tests yet
+2. **Model Management**: /v1/models endpoints (list, load, unload, download GGUF)
+3. **Voice Providers**: All voice implementations are stubs (TODO comments)
+4. **Firebase Sync**: Mock only, real implementation needed
+5. **Hooks**: Directory created, needs shell/Python scripts
+6. **Tests**: No unit tests yet
 
 ### 🔧 Working But Minimal
 1. **Server**: Starts, health check works, can create/list tasks and sessions in memory
@@ -116,28 +123,32 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 
 ## Next Priorities (In Order)
 
-### Phase 1: Wire Inference into Desktop Backend ← WE ARE HERE
-1. Update config/settings.rs to support INFERENCE_MODE=local|cloud
-2. Update main.rs: wire InferenceProvider into AppState
-3. Test: `cargo build` and `cargo run`
-4. Manual test: /v1/chat endpoint using loaded model
-5. Commit documentation + main.rs changes
+### Phase 1: Wire Inference into Desktop Backend ✅ COMPLETE
+1. ✅ Update config/settings.rs to support INFERENCE_MODE=local|cloud
+2. ✅ Update main.rs: wire InferenceProvider into AppState
+3. ✅ Test: `cargo build` and `cargo run`
+4. ✅ Manual test: /v1/chat endpoint using loaded model
+5. ✅ Commit documentation + main.rs changes
 
-### Phase 2: Desktop GUI + Brainstorm Integration
-1. Create desktop web UI (React/Vue in `/frontend` or `/mobile` adapted)
-2. Brainstorm input screen (text + voice)
-3. Connect to /v1/chat/brainstorm endpoint
-4. Display AI responses (text + voice TTS playback)
-5. Extract tasks from brainstorm conversation
+### Phase 2: Desktop GUI + Brainstorm Integration ✅ COMPLETE
+1. ✅ Create Tauri + React desktop app in `/desktop`
+2. ✅ Brainstorm chat component (text input, message history)
+3. ✅ Connect to /v1/chat/completions endpoint
+4. ✅ Display AI responses with typing indicators
+5. ✅ Context windowing: dynamic summarization when exceeding MAX_CONTEXT_SIZE
+6. ✅ "Convert to task" button on responses
+7. ✅ Task panel with priority-based sorting
+8. ✅ Settings panel for context size configuration
 
-### Phase 3: Model Management + Task Parsing
-1. Add /v1/models endpoints (list, load, unload, download)
-2. Implement ResponseParser to extract tasks from model output
-3. Wire inference → response parser → task creation
-4. Test: Brainstorm → AI response → Auto-generated tasks
+### Phase 3: Model Management + Task Parsing ← WE ARE HERE
+1. Test end-to-end: run backend, start desktop app, test chat → inference → responses
+2. Add /v1/models endpoints (list, load, unload, download)
+3. Implement ResponseParser to extract tasks from model output
+4. Wire inference → response parser → task creation
+5. Test: Brainstorm → AI response → Auto-generated tasks
 
 ### Phase 4: Mobile App & Cross-Device Sync
-1. Adapt desktop UI for mobile (React Native)
+1. Adapt desktop UI for mobile (React Native from `/mobile`)
 2. Firebase sync: tasks and brainstorm sessions across devices
 3. Voice integration: Whisper STT + Piper TTS
 4. Test cross-device brainstorming
@@ -173,18 +184,21 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 
 ## Branch Info
 - Branch: `claude/brain-ai-backend-jSgFI`
-- Commits: 3 (initial scaffold, complete scaffold with voice/main, add embedded llama.cpp)
-- Latest: Embedded llama.cpp inference (LocalGGUFInference + CloudOpenAIInference)
-- Pushed: ✅ Ready for main.rs wiring
+- Commits: 4 (initial scaffold, complete scaffold with voice/main, add embedded llama.cpp, desktop GUI)
+- Latest: Desktop GUI (Tauri + React brainstorm chat with task management)
+- Pushed: ✅ Ready for testing and Phase 3
 
 ## Current Handoff Checklist
-- [ ] Wire InferenceProvider into main.rs AppState
-- [ ] Update config/settings.rs for INFERENCE_MODE env var
-- [ ] Verify `cargo build` succeeds
-- [ ] Verify `cargo run` starts server with inference provider
-- [ ] Test curl http://localhost:8000/health
-- [ ] Add /v1/chat/completions endpoint using InferenceProvider
-- [ ] Create desktop GUI (React web app)
-- [ ] Test brainstorm → inference → response flow
+- [x] Wire InferenceProvider into main.rs AppState
+- [x] Update config/settings.rs for INFERENCE_MODE env var
+- [x] Verify `cargo build` succeeds
+- [x] Verify `cargo run` starts server with inference provider
+- [x] Add /v1/chat/completions endpoint using InferenceProvider
+- [x] Create desktop GUI (Tauri + React web app)
+- [ ] Test end-to-end: npm install → npm run dev → test chat flow
+- [ ] Verify context windowing works when conversation exceeds MAX_CONTEXT_SIZE
+- [ ] Test "Convert to task" button creates tasks in panel
+- [ ] Test task priority adjustment and deletion
 - [ ] Add /v1/models endpoints
-- [ ] Commit and push to branch
+- [ ] Implement ResponseParser for task extraction
+- [ ] Commit and push final changes
