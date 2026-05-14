@@ -1,0 +1,43 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Data & Storage
+data/
+*.db
+*.sqlite
+*.json.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node/Mobile
+node_modules/
+npm-debug.log
+yarn-error.log
+.gradle/
+build/
+.android/
+.ios/
+
+# Logs
+*.log
+logs/
+
+# Credentials
+*.key
+*.pem
+*credentials*
+*secret*
