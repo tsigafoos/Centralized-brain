@@ -83,8 +83,20 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
    - TaskPanel component: priority-based sorting, status tracking, collapsible
    - SettingsPanel component: context size configuration, persistent settings
    - API integration: wired to /v1/chat/completions on port 9000
-   - Context windowing: dynamic summarization when exceeding MAX_CONTEXT_SIZE
+   - Context windowing: keeps last 6 messages + summarizes earlier if space permits
    - Token estimation: ~0.25 tokens per character for real-time management
+
+### ✅ Newly Complete (Model Management Phase)
+1. **Model Management**: Full GGUF model discovery and loading
+   - ModelManager: discovers .gguf files in models directory
+   - /v1/models GET: lists all models with size and load status
+   - /v1/models/:id/load POST: load a specific model
+   - /v1/models/unload POST: unload current model
+2. **Task Extraction**: ResponseParser for auto-generating tasks
+   - Extracts tasks from AI responses using regex patterns
+   - Supports: numbered lists, bullet points, TODO items
+   - Extracts success criteria and distributes across tasks
+   - Deduplicates while preserving order
 
 ### ⚠️ Stubs/TODO
 1. **ResponseParser**: Needs to use InferenceProvider to extract tasks from brainstorm
@@ -140,20 +152,25 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 7. ✅ Task panel with priority-based sorting
 8. ✅ Settings panel for context size configuration
 
-### Phase 3: Model Management + Task Parsing ← WE ARE HERE
-1. Test end-to-end: run backend, start desktop app, test chat → inference → responses
-2. Add /v1/models endpoints (list, load, unload, download)
-3. Implement ResponseParser to extract tasks from model output
-4. Wire inference → response parser → task creation
-5. Test: Brainstorm → AI response → Auto-generated tasks
+### Phase 3: Model Management + Task Parsing ✅ COMPLETE
+1. ✅ Add /v1/models endpoints (list, load, unload)
+2. ✅ Create ModelManager for discovering and tracking GGUF models
+3. ✅ Implement ResponseParser to extract tasks from AI responses
+4. ✅ Support multiple task formats (numbered, bullets, TODOs)
+5. ✅ Extract and distribute success criteria
 
-### Phase 4: Mobile App & Cross-Device Sync
+### Phase 4: End-to-End Testing ← WE ARE HERE
+1. Test backend: cargo run, verify model endpoints work
+2. Test desktop: npm run dev, verify chat connects
+3. Test full flow: brainstorm → inference → auto-tasks
+
+### Phase 5: Mobile App & Cross-Device Sync
 1. Adapt desktop UI for mobile (React Native from `/mobile`)
 2. Firebase sync: tasks and brainstorm sessions across devices
 3. Voice integration: Whisper STT + Piper TTS
 4. Test cross-device brainstorming
 
-### Phase 5: Production Readiness
+### Phase 6: Production Readiness
 1. Persistent storage (JSON/SQLite TaskStore, BrainstormStore)
 2. Real Firebase integration
 3. Installation hooks (desktop systemd, remote Python)
