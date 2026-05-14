@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.DS_Store
+target/
+*.pem
+/src-tauri/target
+
+# Tauri build artifacts
+src-tauri/target/
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+out/
