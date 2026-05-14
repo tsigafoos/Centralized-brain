@@ -1,11 +1,11 @@
 use centralized_brain::{
     brainstorm::{InMemoryBrainstormStore, BrainstormStore, BrainstormSession},
     config::{Settings, InferenceMode},
-    inference::{create_inference_provider, InferenceProvider, LocalGGUFConfig, CloudOpenAIConfig},
+    inference::{create_inference_provider, InferenceProvider, LocalGGUFConfig, CloudOpenAIConfig, ResponseParser, ModelManager},
     task_queue::{InMemoryTaskStore, TaskStore, Task},
 };
 use axum::{
-    extract::State,
+    extract::{State, Path},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -21,6 +21,7 @@ struct AppState {
     brainstorm_store: Arc<InMemoryBrainstormStore>,
     inference_provider: Arc<dyn InferenceProvider>,
     settings: Arc<Settings>,
+    model_manager: Arc<ModelManager>,
 }
 
 #[tokio::main]
@@ -62,11 +63,14 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    let model_manager = Arc::new(ModelManager::new(settings.models_dir.clone()));
+
     let state = AppState {
         task_store: Arc::new(InMemoryTaskStore::new()),
         brainstorm_store: Arc::new(InMemoryBrainstormStore::new()),
         inference_provider,
         settings: Arc::new(settings.clone()),
+        model_manager,
     };
 
     let app = Router::new()
@@ -78,8 +82,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/session", post(create_session).get(list_sessions))
         // Chat/Inference endpoint
         .route("/v1/chat/completions", post(chat_completions))
-        // Model info endpoint
+        // Model management endpoints
         .route("/v1/models", get(list_models))
+        .route("/v1/models/:model_id/load", post(load_model))
+        .route("/v1/models/unload", post(unload_model))
         .with_state(state);
 
     let addr = format!("{}:{}", settings.server_host, settings.server_port);
@@ -208,17 +214,70 @@ async fn chat_completions(
 
 /// Get available models info
 async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
-    Json(json!({
-        "object": "list",
-        "data": [
-            {
-                "id": "local-gguf",
-                "object": "model",
-                "owned_by": "local",
-                "inference_mode": format!("{:?}", state.settings.inference_mode)
-            }
-        ]
-    }))
+    match state.model_manager.list_models().await {
+        Ok(models) => {
+            let data: Vec<_> = models
+                .iter()
+                .map(|m| {
+                    json!({
+                        "id": m.id,
+                        "name": m.name,
+                        "size_mb": m.size_mb,
+                        "loaded": m.loaded,
+                        "object": "model",
+                        "owned_by": "local"
+                    })
+                })
+                .collect();
+
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "object": "list",
+                    "data": data
+                })),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+/// Load a specific model
+async fn load_model(
+    State(state): State<AppState>,
+    Path(model_id): Path<String>,
+) -> impl IntoResponse {
+    match state.model_manager.load_model(&model_id).await {
+        Ok(_) => {
+            info!("Loaded model: {}", model_id);
+            (StatusCode::OK, Json(json!({"status": "loaded", "model": model_id}))).into_response()
+        }
+        Err(e) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+/// Unload current model
+async fn unload_model(State(state): State<AppState>) -> impl IntoResponse {
+    match state.model_manager.unload_model().await {
+        Ok(_) => {
+            info!("Unloaded model");
+            (StatusCode::OK, Json(json!({"status": "unloaded"}))).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
 }
 
 // Request types
