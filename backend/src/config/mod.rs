@@ -1,3 +1,3 @@
 pub mod settings;
 
-pub use settings::{Settings, VoiceBackend};
+pub use settings::{Settings, VoiceBackend, InferenceMode};

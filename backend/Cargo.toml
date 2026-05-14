@@ -27,8 +27,6 @@ futures = "0.3"
 tokio-stream = "0.1"
 rusqlite = { version = "0.31", features = ["bundled"] }
 dirs = "5.0"
-google-cloud-speech = "0.5"
-google-cloud-texttospeech = "0.5"
 
 [dev-dependencies]
 tokio-test = "0.4"

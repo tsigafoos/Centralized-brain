@@ -15,7 +15,15 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 
 ## Core Architectural Decisions
 
-### 1. Voice Backend: Local-First + Pluggable
+### 1. Inference: Local-First + Pluggable
+- **Default**: Embedded llama.cpp with GGUF models (completely offline, like local-brain)
+- **Optional**: OpenAI-compatible endpoint (OpenAI, local ollama, vLLM, etc.)
+- **Implementation**: Trait-based `InferenceProvider`
+- **Config**: `INFERENCE_MODE=local` (default) or `cloud`
+- **User choice determines what runs** - if local, zero cloud dependencies
+- **Model management**: Add/remove GGUF models, load/unload at runtime via API
+
+### 1b. Voice Backend: Local-First + Pluggable
 - **Default**: Local Whisper (STT) + Piper (TTS) - completely offline
 - **Optional**: Google Cloud Speech/TTS - swappable via config
 - **Implementation**: Trait-based (`SpeechToTextProvider`, `TextToSpeechProvider`)
@@ -61,14 +69,23 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 9. **Documentation**: Root README, backend README, mobile README, hooks README
 10. **Configuration**: .env.default with sensible defaults, .gitignore
 
+### ✅ Newly Complete (Inference Phase)
+1. **Inference Module**: Full trait-based InferenceProvider
+   - LocalGGUFInference: Embedded llama.cpp with llama_cpp_2 crate
+   - CloudOpenAIInference: OpenAI-compatible endpoint client
+   - Both sync (infer) and async streaming (infer_stream) modes
+   - Temperature sampling, context management, token streaming
+2. **Cargo.toml**: Updated with llama-cpp-2, encoding_rs, tokio-tungstenite, rusqlite
+
 ### ⚠️ Stubs/TODO
-1. **Inference**: ResponseParser needs implementation (extract tasks from model output)
-2. **OpenAI Client**: send_prompt is mock
-3. **Voice Providers**: All voice implementations are stubs (TODO comments)
-4. **Firebase Sync**: Mock only, real implementation needed
-5. **Mobile App**: Directory created, needs React Native code
-6. **Hooks**: Directory created, needs shell/Python scripts
-7. **Tests**: No unit tests yet
+1. **ResponseParser**: Needs to use InferenceProvider to extract tasks from brainstorm
+2. **Config/Main**: Wire InferenceProvider into AppState (in progress)
+3. **Model Management**: /v1/models endpoints (list, load, unload, download GGUF)
+4. **Voice Providers**: All voice implementations are stubs (TODO comments)
+5. **Firebase Sync**: Mock only, real implementation needed
+6. **Desktop GUI**: React/Vue web app for brainstorming and task management
+7. **Hooks**: Directory created, needs shell/Python scripts
+8. **Tests**: No unit tests yet
 
 ### 🔧 Working But Minimal
 1. **Server**: Starts, health check works, can create/list tasks and sessions in memory
@@ -78,47 +95,58 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 ## Key Files & Their Purpose
 
 ### Backend
-- **src/main.rs** - Axum server, route handlers, AppState
+- **src/main.rs** - Axum server, route handlers, AppState (TODO: wire InferenceProvider)
 - **src/lib.rs** - Module re-exports
+- **src/inference/provider.rs** - InferenceProvider trait, LocalGGUFConfig, CloudOpenAIConfig
+- **src/inference/local_gguf.rs** - LocalGGUFInference: llama.cpp with llama_cpp_2
+- **src/inference/cloud_openai.rs** - CloudOpenAIInference: OpenAI-compatible fallback
+- **src/inference/response_parser.rs** - ResponseParser (TODO: use inference for task extraction)
 - **src/task_queue/task.rs** - Task struct, Status, Priority enums
 - **src/task_queue/storage.rs** - TaskStore trait, InMemoryTaskStore
 - **src/brainstorm/session.rs** - BrainstormSession struct
 - **src/brainstorm/context.rs** - SessionContext, ConversationMessage, message types
 - **src/brainstorm/storage.rs** - BrainstormStore trait, InMemoryBrainstormStore
-- **src/voice/integration.rs** - SpeechToTextProvider trait, Whisper + Google impls
-- **src/voice/synthesis.rs** - TextToSpeechProvider trait, Piper + Google impls
-- **src/sync/cloud_api.rs** - CloudSync trait, MockCloudSync, FirebaseSync
-- **src/config/settings.rs** - Settings struct, VoiceBackend enum, env loading
-- **Cargo.toml** - Dependencies
-- **.env.default** - Default config, all settings documented
-- **README.md** - API endpoints, architecture, features
+- **src/voice/integration.rs** - SpeechToTextProvider trait, Whisper + Google impls (stubs)
+- **src/voice/synthesis.rs** - TextToSpeechProvider trait, Piper + Google impls (stubs)
+- **src/sync/cloud_api.rs** - CloudSync trait, MockCloudSync, FirebaseSync (stubs)
+- **src/config/settings.rs** - Settings struct, VoiceBackend enum, env loading (TODO: add InferenceMode)
+- **Cargo.toml** - Dependencies (updated with llama-cpp-2)
+- **.env.default** - Default config (TODO: document inference mode)
+- **README.md** - API endpoints, architecture, features (TODO: add inference docs)
 
 ## Next Priorities (In Order)
 
-### Phase 1: Get Server Running & Testable
-1. Fix any Cargo.toml issues (compile backend)
-2. Test server starts: `cargo run`
-3. Test endpoints: `curl http://localhost:8000/health`
-4. Add session message endpoints (POST /session/:id/message)
-5. Add unit tests for storage traits
+### Phase 1: Wire Inference into Desktop Backend ← WE ARE HERE
+1. Update config/settings.rs to support INFERENCE_MODE=local|cloud
+2. Update main.rs: wire InferenceProvider into AppState
+3. Test: `cargo build` and `cargo run`
+4. Manual test: /v1/chat endpoint using loaded model
+5. Commit documentation + main.rs changes
 
-### Phase 2: Voice Integration
-1. Implement Whisper local transcription (or stub for testing)
-2. Implement Piper local TTS (or stub for testing)
-3. Add /transcribe and /speak endpoints
-4. Wire voice into inference pipeline
+### Phase 2: Desktop GUI + Brainstorm Integration
+1. Create desktop web UI (React/Vue in `/frontend` or `/mobile` adapted)
+2. Brainstorm input screen (text + voice)
+3. Connect to /v1/chat/brainstorm endpoint
+4. Display AI responses (text + voice TTS playback)
+5. Extract tasks from brainstorm conversation
 
-### Phase 3: Mobile & Sync
-1. Create React Native project structure
-2. Implement voice capture/playback
-3. Add Firebase sync (use FirebaseSync impl)
-4. Test cross-device session sync
+### Phase 3: Model Management + Task Parsing
+1. Add /v1/models endpoints (list, load, unload, download)
+2. Implement ResponseParser to extract tasks from model output
+3. Wire inference → response parser → task creation
+4. Test: Brainstorm → AI response → Auto-generated tasks
 
-### Phase 4: Production Readiness
-1. JSON file-based storage (implement TaskStore/BrainstormStore for JSON)
+### Phase 4: Mobile App & Cross-Device Sync
+1. Adapt desktop UI for mobile (React Native)
+2. Firebase sync: tasks and brainstorm sessions across devices
+3. Voice integration: Whisper STT + Piper TTS
+4. Test cross-device brainstorming
+
+### Phase 5: Production Readiness
+1. Persistent storage (JSON/SQLite TaskStore, BrainstormStore)
 2. Real Firebase integration
-3. Inference pipeline (parse model responses into tasks)
-4. Installation hooks (local systemd, remote Python)
+3. Installation hooks (desktop systemd, remote Python)
+4. Model auto-download from HuggingFace
 
 ## Important Context
 
@@ -145,14 +173,18 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 
 ## Branch Info
 - Branch: `claude/brain-ai-backend-jSgFI`
-- Commits: 2 (initial scaffold, complete scaffold with voice/main)
-- Ready to push: Yes, after next test/build verification
+- Commits: 3 (initial scaffold, complete scaffold with voice/main, add embedded llama.cpp)
+- Latest: Embedded llama.cpp inference (LocalGGUFInference + CloudOpenAIInference)
+- Pushed: ✅ Ready for main.rs wiring
 
-## Handoff Checklist for Next Session
+## Current Handoff Checklist
+- [ ] Wire InferenceProvider into main.rs AppState
+- [ ] Update config/settings.rs for INFERENCE_MODE env var
 - [ ] Verify `cargo build` succeeds
-- [ ] Verify `cargo run` starts server
+- [ ] Verify `cargo run` starts server with inference provider
 - [ ] Test curl http://localhost:8000/health
-- [ ] Add session message endpoint
-- [ ] Add tests
-- [ ] Fix any compile errors
-- [ ] Commit and document progress
+- [ ] Add /v1/chat/completions endpoint using InferenceProvider
+- [ ] Create desktop GUI (React web app)
+- [ ] Test brainstorm → inference → response flow
+- [ ] Add /v1/models endpoints
+- [ ] Commit and push to branch
