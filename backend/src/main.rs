@@ -1,8 +1,8 @@
 use centralized_brain::{
-    brainstorm::{InMemoryBrainstormStore, BrainstormSession},
+    brainstorm::{InMemoryBrainstormStore, BrainstormStore, BrainstormSession},
     config::{Settings, InferenceMode},
     inference::{create_inference_provider, InferenceProvider, LocalGGUFConfig, CloudOpenAIConfig},
-    task_queue::{InMemoryTaskStore, Task},
+    task_queue::{InMemoryTaskStore, TaskStore, Task},
 };
 use axum::{
     extract::State,
@@ -105,7 +105,7 @@ async fn create_task(
     Json(req): Json<CreateTaskRequest>,
 ) -> impl IntoResponse {
     let task = Task::new(req.title, req.success_criteria);
-    match state.task_store.create(task).await {
+    match (*state.task_store).create(task).await {
         Ok(task) => (StatusCode::CREATED, Json(task)).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -117,7 +117,7 @@ async fn create_task(
 
 /// List all tasks
 async fn list_tasks(State(state): State<AppState>) -> impl IntoResponse {
-    match state.task_store.list().await {
+    match (*state.task_store).list().await {
         Ok(tasks) => (StatusCode::OK, Json(tasks)).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -133,7 +133,7 @@ async fn create_session(
     Json(req): Json<CreateSessionRequest>,
 ) -> impl IntoResponse {
     let session = BrainstormSession::new(req.title, req.device_origin);
-    match state.brainstorm_store.create_session(session).await {
+    match (*state.brainstorm_store).create_session(session).await {
         Ok(session) => (StatusCode::CREATED, Json(session)).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -145,7 +145,7 @@ async fn create_session(
 
 /// List all brainstorm sessions
 async fn list_sessions(State(state): State<AppState>) -> impl IntoResponse {
-    match state.brainstorm_store.list_sessions().await {
+    match (*state.brainstorm_store).list_sessions().await {
         Ok(sessions) => (StatusCode::OK, Json(sessions)).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
