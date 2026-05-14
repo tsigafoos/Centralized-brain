@@ -54,23 +54,33 @@ export default function BrainstormChat({
   }
 
   const buildContextWindow = (allMessages: Message[]): { messages: Message[]; summary: string } => {
-    let totalTokens = 0
-    const contextMessages: Message[] = []
-    let summary = ''
-
-    for (let i = allMessages.length - 1; i >= 0; i--) {
-      const msg = allMessages[i]
-      const msgTokens = estimateTokens(msg.content)
-
-      if (totalTokens + msgTokens <= maxContextSize) {
-        contextMessages.unshift(msg)
-        totalTokens += msgTokens
-      } else if (i > 0) {
-        const earlierMessages = allMessages.slice(0, i)
-        summary = generateSummary(earlierMessages)
-        break
-      }
+    if (allMessages.length === 0) {
+      return { messages: [], summary: '' }
     }
+
+    let contextMessages = [...allMessages]
+    let summaries: string[] = []
+    let totalTokens = estimateTokens(JSON.stringify(contextMessages))
+
+    // Iteratively summarize oldest messages until we fit within the limit
+    while (totalTokens > maxContextSize && contextMessages.length > 1) {
+      // Remove the oldest message and summarize it
+      const removedMessage = contextMessages.shift()
+      if (removedMessage) {
+        const msgSummary = `User: "${removedMessage.content.substring(0, 50)}${removedMessage.content.length > 50 ? '...' : ''}"`
+        summaries.unshift(msgSummary)
+      }
+
+      // Recalculate total tokens with remaining messages
+      totalTokens = estimateTokens(JSON.stringify(contextMessages))
+      summaries.forEach(s => {
+        totalTokens += estimateTokens(s)
+      })
+    }
+
+    const summary = summaries.length > 0
+      ? `[Earlier messages: ${summaries.join(' → ')}]`
+      : ''
 
     return { messages: contextMessages, summary }
   }
@@ -99,17 +109,24 @@ export default function BrainstormChat({
 
     try {
       const { messages: contextMessages, summary } = buildContextWindow(updatedMessages)
-      const conversationHistory = contextMessages.map(m => ({
-        role: m.role,
-        content: m.content,
-      }))
+
+      // Build conversation history with summary prepended if needed
+      const conversationHistory = []
 
       if (summary) {
-        conversationHistory.unshift({
-          role: 'system',
+        conversationHistory.push({
+          role: 'system' as const,
           content: summary,
         })
       }
+
+      // Add all context messages (these already exclude summarized ones)
+      contextMessages.forEach(m => {
+        conversationHistory.push({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })
+      })
 
       const response = await fetch(`${backendUrl}/v1/chat/completions`, {
         method: 'POST',
