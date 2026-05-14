@@ -58,31 +58,45 @@ export default function BrainstormChat({
       return { messages: [], summary: '' }
     }
 
-    let contextMessages = [...allMessages]
-    let summaries: string[] = []
-    let totalTokens = estimateTokens(JSON.stringify(contextMessages))
+    const KEEP_RECENT = 6
+    let summary = ''
 
-    // Iteratively summarize oldest messages until we fit within the limit
-    while (totalTokens > maxContextSize && contextMessages.length > 1) {
-      // Remove the oldest message and summarize it
-      const removedMessage = contextMessages.shift()
-      if (removedMessage) {
-        const msgSummary = `User: "${removedMessage.content.substring(0, 50)}${removedMessage.content.length > 50 ? '...' : ''}"`
-        summaries.unshift(msgSummary)
+    // Start with last 6 messages (guaranteed)
+    let recentMessages = allMessages.slice(Math.max(0, allMessages.length - KEEP_RECENT))
+    let usedTokens = estimateTokens(JSON.stringify(recentMessages))
+    let availableTokens = maxContextSize - usedTokens
+
+    // If we have older messages, try to fit them (summarized) in remaining space
+    const olderMessages = allMessages.slice(0, Math.max(0, allMessages.length - KEEP_RECENT))
+    let summarized: string[] = []
+
+    if (olderMessages.length > 0 && availableTokens > 100) {
+      // Try to summarize and fit older messages
+      for (let i = olderMessages.length - 1; i >= 0; i--) {
+        const msg = olderMessages[i]
+        const role = msg.role === 'user' ? 'User' : 'Assistant'
+        const preview = msg.content.substring(0, 40)
+        const msgSummary = `${role}: "${preview}${msg.content.length > 40 ? '...' : ''}"`
+        const summaryTokens = estimateTokens(msgSummary)
+
+        if (summaryTokens <= availableTokens) {
+          summarized.unshift(msgSummary)
+          availableTokens -= summaryTokens
+        }
       }
 
-      // Recalculate total tokens with remaining messages
-      totalTokens = estimateTokens(JSON.stringify(contextMessages))
-      summaries.forEach(s => {
-        totalTokens += estimateTokens(s)
-      })
+      if (summarized.length > 0) {
+        summary = `[Earlier: ${summarized.join(' | ')}]`
+      }
     }
 
-    const summary = summaries.length > 0
-      ? `[Earlier messages: ${summaries.join(' → ')}]`
-      : ''
+    // If recent messages exceed limit (shouldn't happen but handle it), shrink from oldest recent
+    while (usedTokens > maxContextSize && recentMessages.length > 1) {
+      recentMessages.shift()
+      usedTokens = estimateTokens(JSON.stringify(recentMessages))
+    }
 
-    return { messages: contextMessages, summary }
+    return { messages: recentMessages, summary }
   }
 
   const generateSummary = (msgs: Message[]): string => {
