@@ -43,9 +43,6 @@ services:
   #     OLLAMA_HOST: 0.0.0.0:11434
   #   # Run: ollama pull llama2-uncensored (or your preferred model)
 
-volumes:
-  # ollama:
-
 networks:
   centralized-brain-network:
     driver: bridge
