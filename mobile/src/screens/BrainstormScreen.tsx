@@ -14,7 +14,7 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import { Message } from '../types'
 import { chatCompletions, createTask } from '../services/api'
-import { startRecording, stopRecording, initAudio } from '../services/voice'
+import { startRecording, stopRecording, initAudio, synthesizeVoice, playAudio, stopAudio } from '../services/voice'
 
 const styles = StyleSheet.create({
   container: {
@@ -145,6 +145,8 @@ export const BrainstormScreen: React.FC<BrainstormScreenProps> = ({
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [recording, setRecording] = useState(false)
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null)
+  const [voiceSynthesizing, setVoiceSynthesizing] = useState<string | null>(null)
   const scrollViewRef = useRef<ScrollView>(null)
 
   useEffect(() => {
@@ -275,6 +277,32 @@ export const BrainstormScreen: React.FC<BrainstormScreenProps> = ({
     }
   }
 
+  const handleVoicePlayback = async (messageId: string, content: string) => {
+    try {
+      if (playingVoiceId === messageId) {
+        // Stop playback
+        await stopAudio()
+        setPlayingVoiceId(null)
+        return
+      }
+
+      // Synthesize voice
+      setVoiceSynthesizing(messageId)
+      const audioUri = await synthesizeVoice(content)
+      setVoiceSynthesizing(null)
+
+      if (audioUri) {
+        await playAudio(audioUri)
+        setPlayingVoiceId(messageId)
+      } else {
+        Alert.alert('Error', 'Failed to synthesize voice')
+      }
+    } catch (error) {
+      setVoiceSynthesizing(null)
+      Alert.alert('Error', 'Failed to play voice')
+    }
+  }
+
   const handleTaskConversion = async (messageId: string) => {
     const message = messages.find((m) => m.id === messageId)
     if (!message) return
@@ -340,14 +368,35 @@ export const BrainstormScreen: React.FC<BrainstormScreenProps> = ({
                   {msg.content}
                 </Text>
                 {msg.role === 'assistant' && (
-                  <TouchableOpacity
-                    onPress={() => handleTaskConversion(msg.id)}
-                    style={{ marginTop: 8 }}
-                  >
-                    <Text style={{ color: '#4CAF50', fontSize: 12 }}>
-                      ➕ Add Task
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={{ marginTop: 8, gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleVoicePlayback(msg.id, msg.content)
+                      }
+                      disabled={voiceSynthesizing === msg.id}
+                    >
+                      <Text
+                        style={{
+                          color: playingVoiceId === msg.id ? '#f44336' : '#4CAF50',
+                          fontSize: 12,
+                          fontWeight: '600',
+                        }}
+                      >
+                        {voiceSynthesizing === msg.id
+                          ? '🔊 Generating...'
+                          : playingVoiceId === msg.id
+                          ? '⏸ Stop Voice'
+                          : '🔊 Play Voice'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleTaskConversion(msg.id)}
+                    >
+                      <Text style={{ color: '#4CAF50', fontSize: 12 }}>
+                        ➕ Add Task
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             </View>

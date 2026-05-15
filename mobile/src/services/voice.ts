@@ -1,5 +1,7 @@
 import { Audio } from 'expo-av'
 import * as FileSystem from 'expo-file-system'
+import axios from 'axios'
+import { getBackendUrl } from './api'
 
 let recording: Audio.Recording | null = null
 let sound: Audio.Sound | null = null
@@ -80,6 +82,39 @@ export const stopAudio = async () => {
     }
   } catch (error) {
     console.error('Failed to stop audio:', error)
+  }
+}
+
+// Synthesize speech from text using backend Voxtral TTS
+export const synthesizeVoice = async (
+  text: string,
+  voice: string = 'Alice'
+): Promise<string | null> => {
+  try {
+    const backendUrl = getBackendUrl()
+    const response = await axios.post(
+      `${backendUrl}/speak`,
+      {
+        text,
+        voice,
+      },
+      {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      }
+    )
+
+    // Save audio data to file
+    const fileUri = `${FileSystem.cacheDirectory}tts_audio_${Date.now()}.wav`
+    const base64Data = Buffer.from(response.data).toString('base64')
+    await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+
+    return fileUri
+  } catch (error) {
+    console.error('Failed to synthesize voice:', error)
+    return null
   }
 }
 
