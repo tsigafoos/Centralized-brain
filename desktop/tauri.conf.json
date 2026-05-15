@@ -6,6 +6,7 @@
     "frontendDist": "../src-tauri/target/frontend"
   },
   "app": {
+    "identifier": "com.centralized-brain.desktop",
     "windows": [
       {
         "title": "Centralized Brain",
@@ -22,28 +23,11 @@
       "csp": null
     }
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "http": {
-        "all": false,
-        "scope": [
-          "http://127.0.0.1:9000/*",
-          "http://localhost:9000/*"
-        ]
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.centralized-brain.desktop"
-    },
-    "updater": {
-      "active": false
-    }
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  },
+  "security": {
+    "csp": null
   }
 }
