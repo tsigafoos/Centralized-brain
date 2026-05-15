@@ -1,7 +1,7 @@
 use centralized_brain::{
     brainstorm::{InMemoryBrainstormStore, BrainstormStore, BrainstormSession},
     config::{Settings, InferenceMode},
-    inference::{create_inference_provider, InferenceProvider, LocalGGUFConfig, CloudOpenAIConfig, ResponseParser, ModelManager},
+    inference::{create_inference_provider, InferenceProvider, LocalGGUFConfig, CloudOpenAIConfig, ResponseParser, ModelManager, VoxtralTTS, VoxtralConfig},
     task_queue::{InMemoryTaskStore, TaskStore, Task},
 };
 use axum::{
@@ -22,6 +22,7 @@ struct AppState {
     inference_provider: Arc<dyn InferenceProvider>,
     settings: Arc<Settings>,
     model_manager: Arc<ModelManager>,
+    voxtral_tts: Option<Arc<VoxtralTTS>>,
 }
 
 #[tokio::main]
@@ -65,12 +66,22 @@ async fn main() -> anyhow::Result<()> {
 
     let model_manager = Arc::new(ModelManager::new(settings.models_dir.clone()));
 
+    // Initialize Voxtral TTS if API key is available
+    let voxtral_tts = settings.voxtral_api_key.as_ref().map(|api_key| {
+        info!("Voxtral TTS enabled");
+        Arc::new(VoxtralTTS::new(VoxtralConfig {
+            api_key: api_key.clone(),
+            api_endpoint: "https://api.mistral.ai/v1/audio".to_string(),
+        }))
+    });
+
     let state = AppState {
         task_store: Arc::new(InMemoryTaskStore::new()),
         brainstorm_store: Arc::new(InMemoryBrainstormStore::new()),
         inference_provider,
         settings: Arc::new(settings.clone()),
         model_manager,
+        voxtral_tts,
     };
 
     let app = Router::new()
@@ -82,6 +93,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/session", post(create_session).get(list_sessions))
         // Chat/Inference endpoint
         .route("/v1/chat/completions", post(chat_completions))
+        // Voice endpoint
+        .route("/speak", post(text_to_speech))
         // Model management endpoints
         .route("/v1/models", get(list_models))
         .route("/v1/models/:model_id/load", post(load_model))
@@ -280,6 +293,40 @@ async fn unload_model(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
+/// Text-to-speech endpoint
+async fn text_to_speech(
+    State(state): State<AppState>,
+    Json(req): Json<TextToSpeechRequest>,
+) -> impl IntoResponse {
+    if let Some(voxtral) = &state.voxtral_tts {
+        let voice = req.voice.unwrap_or_else(|| "Alice".to_string());
+        match voxtral.synthesize(&req.text, &voice).await {
+            Ok(audio_bytes) => {
+                (
+                    StatusCode::OK,
+                    [(
+                        axum::http::header::CONTENT_TYPE,
+                        "audio/wav",
+                    )],
+                    audio_bytes,
+                )
+                    .into_response()
+            }
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "Voxtral TTS not configured"})),
+        )
+            .into_response()
+    }
+}
+
 // Request types
 #[derive(serde::Deserialize)]
 struct CreateTaskRequest {
@@ -304,4 +351,10 @@ struct ChatCompletionRequest {
 struct ChatMessage {
     role: String,
     content: String,
+}
+
+#[derive(serde::Deserialize)]
+struct TextToSpeechRequest {
+    text: String,
+    voice: Option<String>,
 }

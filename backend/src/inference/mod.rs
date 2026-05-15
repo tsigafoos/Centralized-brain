@@ -3,12 +3,14 @@ pub mod provider;
 pub mod local_gguf;
 pub mod cloud_openai;
 pub mod model_manager;
+pub mod voxtral_tts;
 
 pub use response_parser::ResponseParser;
 pub use provider::{InferenceProvider, LocalGGUFConfig, CloudOpenAIConfig};
 pub use local_gguf::LocalGGUFInference;
 pub use cloud_openai::CloudOpenAIInference;
 pub use model_manager::ModelManager;
+pub use voxtral_tts::{VoxtralTTS, VoxtralConfig};
 
 use anyhow::Result;
 use std::sync::Arc;

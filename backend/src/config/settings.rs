@@ -13,6 +13,7 @@ pub struct Settings {
     pub storage_path: String,
     pub firebase_project_id: Option<String>,
     pub google_cloud_credentials: Option<String>,
+    pub voxtral_api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,6 +66,7 @@ impl Settings {
             storage_path,
             firebase_project_id: env::var("FIREBASE_PROJECT_ID").ok(),
             google_cloud_credentials: env::var("GOOGLE_CLOUD_CREDENTIALS").ok(),
+            voxtral_api_key: env::var("VOXTRAL_API_KEY").ok(),
         })
     }
 }
