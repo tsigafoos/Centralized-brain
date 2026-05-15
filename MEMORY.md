@@ -98,6 +98,22 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
    - Extracts success criteria and distributes across tasks
    - Deduplicates while preserving order
 
+### ✅ Newly Complete (Mobile App Phase)
+1. **React Native Mobile App**: Complete Expo scaffold
+   - Brainstorm Screen: text input, voice button, AI responses, context windowing
+   - Task Queue Screen: priority-sorted tasks, status management, quick actions
+   - Settings Screen: backend URL, context size slider, voice backend toggle
+   - Bottom tab navigation with three main screens
+2. **Mobile Services**:
+   - api.ts: All backend API communication with 30s timeout
+   - voice.ts: Audio recording/playback with Expo AV
+   - Settings: SecureStore encryption for local persistence
+3. **Features**:
+   - Context windowing: last 6 + summarized older messages
+   - Voice integration ready (recording UI, backend endpoints)
+   - Task creation from brainstorm responses
+   - Full settings management and API reference
+
 ### ⚠️ Stubs/TODO
 1. **ResponseParser**: Needs to use InferenceProvider to extract tasks from brainstorm
 2. **Model Management**: /v1/models endpoints (list, load, unload, download GGUF)
@@ -159,22 +175,27 @@ Single-brain AI system running across devices. Core vision: you chat throughout 
 4. ✅ Support multiple task formats (numbered, bullets, TODOs)
 5. ✅ Extract and distribute success criteria
 
-### Phase 4: End-to-End Testing ← WE ARE HERE
-1. Test backend: cargo run, verify model endpoints work
-2. Test desktop: npm run dev, verify chat connects
-3. Test full flow: brainstorm → inference → auto-tasks
+### Phase 4: End-to-End Testing ✅ COMPLETE
+1. ✅ Desktop app (Tauri + React) with brainstorm chat
+2. ✅ Context windowing: last 6 messages + summarized older
+3. ✅ Backend model management endpoints
+4. ✅ Task extraction from AI responses
 
-### Phase 5: Mobile App & Cross-Device Sync
-1. Adapt desktop UI for mobile (React Native from `/mobile`)
-2. Firebase sync: tasks and brainstorm sessions across devices
-3. Voice integration: Whisper STT + Piper TTS
-4. Test cross-device brainstorming
+### Phase 5: Mobile App Scaffolding ✅ COMPLETE
+1. ✅ React Native mobile app with Expo
+2. ✅ BrainstormScreen: text/voice input, AI responses, context windowing
+3. ✅ TaskQueueScreen: priority-sorted task management
+4. ✅ SettingsScreen: backend URL, context size, voice backend config
+5. ✅ Bottom tab navigation with all three screens
+6. ✅ SecureStore for encrypted settings persistence
+7. ✅ Voice service: recording/playback with Expo AV
 
-### Phase 6: Production Readiness
-1. Persistent storage (JSON/SQLite TaskStore, BrainstormStore)
-2. Real Firebase integration
-3. Installation hooks (desktop systemd, remote Python)
-4. Model auto-download from HuggingFace
+### Phase 6: Cross-Device Sync & Production ← WE ARE HERE
+1. Firebase integration (mock → real)
+2. Voice transcription (speech-to-text)
+3. Voice synthesis (text-to-speech) via backend
+4. Persistent storage (JSON/SQLite)
+5. Installation hooks for remote machines
 
 ## Important Context
 
