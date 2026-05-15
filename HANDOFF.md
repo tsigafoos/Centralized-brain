@@ -1,8 +1,21 @@
 # Handoff Document - Centralized Brain Backend
 
-**Date**: 2026-05-14  
-**Branch**: `claude/brain-ai-backend-jSgFI`  
-**Status**: Backend scaffold complete. Server structure ready. Stubs in place. Ready for implementation.
+**Date**: 2026-05-15  
+**Branch**: `main` (all changes pushed)  
+**Status**: Backend compiling & running. Desktop app 95% ready—blocking on single Tauri Cargo.toml fix.
+
+## 🚨 IMMEDIATE ACTION NEEDED
+
+**To unblock desktop app**:
+1. Edit `desktop/src-tauri/Cargo.toml` line 7
+2. Remove `http-client` feature from tauri dependency:
+```toml
+tauri = { version = "2.0", features = ["shell-open"] }  # was: ["shell-open", "http-client"]
+```
+3. Run: `npm run dev` from desktop directory
+4. Desktop Tauri window should launch
+
+---
 
 ## What's Done
 
@@ -28,6 +41,15 @@
 - Storage: TaskStore/BrainstormStore traits (in-memory default)
 - Sync: CloudSync trait (mock default, Firebase impl stubbed)
 - Config: Environment-based voice backend selection
+
+✅ **Recent Progress (2026-05-15)**
+- Backend builds + runs successfully on Windows (llama-cpp-sys + LLVM)
+- Voxtral TTS endpoint implemented (/speak)
+- Desktop Tauri v2 app scaffolded with React + TypeScript
+- BrainstormChat component with voice synthesis UI
+- Voice playback via HTML Audio API
+- All npm dependencies installed
+- LLVM 21.1.6 + CMake installed on Windows machine
 
 ## What Needs Work
 
@@ -175,13 +197,25 @@ curl http://localhost:8000/session
 
 See MEMORY.md for project context and design decisions. See README.md in each directory for module-specific info.
 
-## Next Commit Should
+## For Next Claude Session
 
-- [ ] Verify cargo build succeeds
-- [ ] Add session message endpoints
-- [ ] Add basic tests
-- [ ] Document any compile issues fixed
-- [ ] Update HANDOFF if major changes made
+**Priority 0 (Blocker)**:
+- [ ] Apply Cargo.toml fix (1 line change in desktop/src-tauri/Cargo.toml)
+- [ ] Verify `npm run dev` launches Tauri desktop window
+
+**Priority 1 (Testing)**:
+- [ ] Phase 1 Desktop Test: Basic chat, voice synthesis, task creation
+- [ ] Verify backend at localhost:9000 responds to /chat and /speak
+
+**Priority 2**:
+- [ ] Mobile app integration (React Native + Firebase)
+- [ ] Cross-device sync testing
+
+**Notes for Next Dev**:
+- User has Windows machine at C:\devserver\studio-catharsis\apps\Centralized-brain\
+- This repo at /home/user/Centralized-brain is synced from that
+- Backend runs on localhost:9000, Vite dev on 5173
+- User frustrated with cloud-based approach—work locally in their file system when possible
 
 ---
 
