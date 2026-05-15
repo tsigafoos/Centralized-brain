@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
+import { synthesizeVoice, playAudioBlob, stopAudio } from '../services/voice'
 import './BrainstormChat.css'
 
 interface Message {
@@ -43,6 +44,8 @@ export default function BrainstormChat({
   const [localMessages, setLocalMessages] = useState<Message[]>(messages)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null)
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null)
+  const [synthesizingVoiceId, setSynthesizingVoiceId] = useState<string | null>(null)
 
   useEffect(() => {
     setLocalMessages(messages)
@@ -184,6 +187,29 @@ export default function BrainstormChat({
     }
   }
 
+  const handleVoicePlayback = async (messageId: string, content: string) => {
+    try {
+      if (playingVoiceId === messageId) {
+        stopAudio()
+        setPlayingVoiceId(null)
+        return
+      }
+
+      setSynthesizingVoiceId(messageId)
+      const audioBlob = await synthesizeVoice(content, backendUrl)
+      setSynthesizingVoiceId(null)
+
+      if (audioBlob) {
+        setPlayingVoiceId(messageId)
+        await playAudioBlob(audioBlob)
+        setPlayingVoiceId(null)
+      }
+    } catch (error) {
+      console.error('Voice playback error:', error)
+      setSynthesizingVoiceId(null)
+    }
+  }
+
   const handleConvertToTask = (messageId: string, content: string) => {
     const task: Task = {
       id: uuidv4(),
@@ -228,13 +254,32 @@ export default function BrainstormChat({
               {msg.isSummary && <div className="summary-badge">Summary</div>}
               <p>{msg.content}</p>
               {msg.role === 'assistant' && hoveredMessageId === msg.id && (
-                <button
-                  className="convert-task-btn"
-                  onClick={() => handleConvertToTask(msg.id, msg.content)}
-                  title="Convert this response to a task"
-                >
-                  ➕ Add Task
-                </button>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <button
+                    className="convert-task-btn"
+                    onClick={() => handleVoicePlayback(msg.id, msg.content)}
+                    disabled={synthesizingVoiceId === msg.id}
+                    title="Play AI response as voice"
+                    style={{
+                      flex: 1,
+                      background:
+                        playingVoiceId === msg.id ? '#f44336' : '#4CAF50',
+                    }}
+                  >
+                    {synthesizingVoiceId === msg.id
+                      ? '🔊 Generating...'
+                      : playingVoiceId === msg.id
+                      ? '⏸ Stop'
+                      : '🔊 Play Voice'}
+                  </button>
+                  <button
+                    className="convert-task-btn"
+                    onClick={() => handleConvertToTask(msg.id, msg.content)}
+                    title="Convert this response to a task"
+                  >
+                    ➕ Add Task
+                  </button>
+                </div>
               )}
             </div>
           </div>

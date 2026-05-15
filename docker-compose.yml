@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: centralized-brain-backend
+    ports:
+      - "9000:9000"
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 9000
+      INFERENCE_MODE: cloud
+      OPENAI_ENDPOINT: http://host.docker.internal:8001
+      STORAGE_PATH: /app/data
+      VOICE_BACKEND: local
+      # Add your Voxtral API key here:
+      # VOXTRAL_API_KEY: your-mistral-api-key
+    volumes:
+      - ./data/models:/app/data/models
+      - ./data/sessions:/app/data/sessions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - centralized-brain-network
+
+  # Optional: Ollama or local LLM server on port 8001
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: centralized-brain-ollama
+  #   ports:
+  #     - "8001:11434"
+  #   volumes:
+  #     - ollama:/root/.ollama
+  #   networks:
+  #     - centralized-brain-network
+  #   environment:
+  #     OLLAMA_HOST: 0.0.0.0:11434
+  #   # Run: ollama pull llama2-uncensored (or your preferred model)
+
+volumes:
+  # ollama:
+
+networks:
+  centralized-brain-network:
+    driver: bridge
